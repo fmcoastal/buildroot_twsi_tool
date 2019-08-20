@@ -1,0 +1,9 @@
+config BR2_PACKAGE_TWSI_TOOL
+	bool "twsi_tool"
+	help
+	  twsi_tool is a user mode application which should be able to R/W Twsi Devices
+	
+	  https://github.org/fmcoastal/buildroot_twsi_tool
+	  scp root@10.11.65.82:/scratch/twsi_tool 
+
+comment "I do not have any comments"
