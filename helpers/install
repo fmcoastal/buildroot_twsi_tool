@@ -13,8 +13,10 @@
 
 PACKAGE_NAME="twsi_tool"
 PACKAGE_NAME_REV="$PACKAGE_NAME"-1.0.0
-OUTPUT_DIR=a80x0_mcbin-release-output
-BASE_DIR=/home/fsmith/marvell/sdk/SDK190603/SDK10.0_19.06.3-src
+#OUTPUT_DIR=a80x0_mcbin-release-output
+OUTPUT_DIR=a37xx_espressobin_1000_800-release-output
+#BASE_DIR=/home/fsmith/marvell/sdk/SDK190603/SDK10.0_19.06.3-src
+BASE_DIR=/home/fsmith/marvell/sdk/SDK10.1.1.0-PR
 
 
 #SOURCE_TYPE="github"
@@ -38,7 +40,8 @@ echo "********$NORMAL"
 
 
 #BUILDROOT_EXTERNAL_DIR
-BR_EXT_DIR=$BASE_DIR/buildroot-external-marvell
+#BR_EXT_DIR=$BASE_DIR/buildroot-external-marvell
+BR_EXT_DIR=$BASE_DIR/sdk-base
 
 # check if "buildroot-external-marvel/package/<PACKAGENAME> exists.
 #   if it does, we will leave it alone. 
@@ -48,7 +51,7 @@ if [ ! -d $BR_EXT_DIR/package/$PACKAGE_NAME ] ; then
     echo "mkdir -p $BR_EXT_DIR/package/$PACKAGE_NAME "
     mkdir -p $BR_EXT_DIR/package/$PACKAGE_NAME 
 else
-    echo "package <BASE_DIR>/buildroot-external-marvell/package/$PACKAGE_NAME exists"
+    echo "package <>/$BR_SET_DIR/package/$PACKAGE_NAME exists"
 
 #   #if the directory exists, delete it
 #      rm -rf $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME
@@ -66,11 +69,11 @@ if [ "$SOURCE_TYPE" == "github" ] ; then
 
 
 # copy the files 
-  banner "Move Config.in and <PACKAGE_NAME>.mk to the <sdk>/buildroot-external-marvell/package" 
-  echo " cp ../package/Config.in $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/."
-  cp ../package/Config.in $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/.
-  echo " cp ../package/$PACKAGE_NAME.mk  $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/."
-  cp ../package/$PACKAGE_NAME.mk  $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/.
+  banner "Move Config.in and <PACKAGE_NAME>.mk to the <sdk>/sdk-base/package" 
+  echo " cp ../package/Config.in $BR_EXT_DIR/package/$PACKAGE_NAME/."
+  cp ../package/Config.in $BR_EXT_DIR/package/$PACKAGE_NAME/.
+  echo " cp ../package/$PACKAGE_NAME.mk  $BR_EXT_DRI/package/$PACKAGE_NAME/."
+  cp ../package/$PACKAGE_NAME.mk  $BR_EXT_DIR/package/$PACKAGE_NAME/.
 
   
 
@@ -104,11 +107,11 @@ pushd tmp_pkg
   tar -xzvf $PACKAGE_NAME_REV.tgz
 
 
-  banner "Move Config.in and <PACKAGE_NAME>.mk to the <sdk>/buildroot-external-marvell/package" 
-  echo " cp ./package/Config.in $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/."
-  cp ./package/Config.in $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/.
-  echo " cp ./package/$PACKAGE_NAME.mk  $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/."
-  cp ./package/$PACKAGE_NAME.mk  $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME/.
+  banner "Move Config.in and <PACKAGE_NAME>.mk to the <sdk>/sdk-base/package" 
+  echo " cp ./package/Config.in $BR_EXT_DIR/package/$PACKAGE_NAME/."
+  cp ./package/Config.in $BR_EXT_DIR/package/$PACKAGE_NAME/.
+  echo " cp ./package/$PACKAGE_NAME.mk  $BR_EXT_DIR/package/$PACKAGE_NAME/."
+  cp ./package/$PACKAGE_NAME.mk  $BR_EXT_DIR/package/$PACKAGE_NAME/.
 
 
 popd
@@ -121,7 +124,7 @@ fi
 
 
 
-banner " add our Package to the \"<SDK_BASE>/buildroot-external-marvell/Compile.in\" list"
+banner " add our Package to the \"$BR_EXT_DIR/Compile.in\" list"
 
 # this is not a very exact match.   it will error with packages of similar names
 #          eg:   <ProjectName> would not be installed if there were a package  <ProjectName>_test 
@@ -138,7 +141,7 @@ fi
 banner "contents of Config.in"
 cat  $BR_EXT_DIR/Config.in
 
-banner "contents of:  <SDK>/buildroot-externel-marvell/package/$PACKAGE_NAME/"
+banner "contents of:  $BR_EXT_DIR/package/$PACKAGE_NAME/"
 pushd $BR_EXT_DIR/package/$PACKAGE_NAME >>/dev/zero
 echo "ls -la   * "
 ls -la  *
