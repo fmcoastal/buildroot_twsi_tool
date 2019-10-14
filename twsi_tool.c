@@ -220,10 +220,10 @@ int main(int argc, char ** argv)
         return -2;
      }  
 
-#if 0i
+#if 0
 //  test function to dump the contents of the LM73 on the CRB
    DumpLM73();
-#else 
+#endif 
 
 //  Attach to /dev/i2c-<n> 
    if( result = I2C_Init(devicename) != 0)
@@ -243,11 +243,11 @@ int main(int argc, char ** argv)
    {
        if ( NOT_QUIET )
        {
-def PRINT_WRITE_DATA_WITH_INDEX_COUNT
+#ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
            if( index%16 == 0) printf("\n%3d",index);
-se
+#else
            if( index%16 == 0) printf("\n");
-dif
+#endif
            if( index%8 == 0) printf("  ");
         } // end not quiet
        printf("%02x ", rd_buf[index] );
