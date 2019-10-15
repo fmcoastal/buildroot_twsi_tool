@@ -8,6 +8,10 @@
 #include <getopt.h>  
 #include <string.h>
 
+#include <i2c.h>   // for i2c_msg - THis should devine I2C_M_RD also ??
+
+#include <signal.h>
+
 /* cn9130 Design:
 
    BUS: CP0_I2C0_Sxx
@@ -48,6 +52,9 @@ int g_qflg = 0;      /* flag to suppress everyting but the read
                       * if successful  else error;
                       */ 
 
+
+int g_probe = 0;      /* probe function - will eventuall print all devices on the bus */
+
 #define NOT_QUIET (g_qflg ==0)
 
 int  I2C_Init(char * device);
@@ -57,6 +64,21 @@ int  I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int
 int  GetHex(unsigned char d);
 void PrintBuff(char * ptr , int sz);
 
+// Exception handling
+/* Signal Handler for SIGINT */
+void sigintHandler(int sig_num) 
+{ 
+    /* Reset handler to catch SIGINT next time. 
+       Refer http://en.cppreference.com/w/c/program/signal */
+    signal(SIGINT, sigintHandler); 
+    printf("\n Terminate \n");
+    fflush(stdout); 
+    I2C_Close();
+    exit(-77); 
+} 
+
+
+
 
 void print_usage(void)
 {
@@ -65,6 +87,7 @@ void print_usage(void)
    printf("-a <address>         I2c Devices's Address\n");
    printf("-w 02,0a   write bytes - HEX, comma separated,NO SPACES \n");
    printf("-r <num>       read bytes - number of butes to reads  \n");
+   printf("-p             probe - when it works will return addresses for all devices on bus\n");
    printf("-v             Verbose Flag  \n");
    printf("example: \n");
    printf("./twsi_tool  -d /dev/i2c-1  -a 4c -w 07  -r 2  \n");
@@ -95,12 +118,13 @@ int main(int argc, char ** argv)
 
   int       option ;
   int       UsageFlag = 0;
+  int       addr;
 
 // set up /dev/i2c-0 as the default device bus
    strcpy(devicename, "/dev/i2c-0");
 
 
-   while ((option = getopt(argc, argv,"hqsvl:a:d:w:r:")) != -1) {
+   while ((option = getopt(argc, argv,"hqpsvl:a:d:w:r:")) != -1) {
        switch (option) {
 
             case 'a' : 
@@ -113,6 +137,12 @@ int main(int argc, char ** argv)
             case 'd' : 
                 strcpy(devicename,optarg);  // Serial Port
                 break;
+
+            case 'p' : 
+                UsageFlag++ ;               // Flag we had a good input
+                g_probe = 1 ;               // flag to do Probe Function.
+                break;
+
 
             case 'q' : 
                 g_qflg = 1;                 // global quiet flag
@@ -143,6 +173,11 @@ int main(int argc, char ** argv)
       print_usage();
       return 2;
    }
+
+
+/* Set the SIGINT (Ctrl-C) signal handler to sigintHandler  
+       Refer http://en.cppreference.com/w/c/program/signal */
+    signal(SIGINT, sigintHandler); 
 
 
 // work out the write data....
@@ -190,6 +225,7 @@ int main(int argc, char ** argv)
        printf("   %12d Verbose\n",(int)g_i2c_verbose);
        printf("   %12d Read Size\n",(int)rd_sz);
        printf("   %12d Write Size\n",(int)wr_sz);
+       printf("   %12d Probe Flag\n",(int)g_probe);
 
        if( wr_flg != 0)
        {
@@ -234,32 +270,59 @@ int main(int argc, char ** argv)
       return result;
    }
 
-// execute the Read Write function
-   result = I2C_RdWr(i2c_slave_addr ,wr_buf,wr_sz,rd_buf,rd_sz);
-
-
-   if ( NOT_QUIET ) printf("Read Data:");
-   for ( index = 0 ; index  < rd_sz ; index++)
+   if (g_probe == 1)
    {
-       if ( NOT_QUIET )
-       {
-#ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
-           if( index%16 == 0) printf("\n%3d",index);
-#else
-           if( index%16 == 0) printf("\n");
-#endif
-           if( index%8 == 0) printf("  ");
-        } // end not quiet
-       printf("%02x ", rd_buf[index] );
-   }
-   printf("\n");
+      uint8_t addr;
+      wr_buf[0] = 0;
+      wr_sz      = 1;
+      rd_sz      = 0;
+      rd_buf[0] = 0;
+      
+      for (addr = 1 ; addr < 0x7f; addr ++)
+      {
+         result = I2C_RdWr(addr ,wr_buf,wr_sz,rd_buf,rd_sz);
+         if(result == 0)
+         {
+         printf("Addr: 0x%02x, Device Present\n",addr);
+         }
+         else
+         {
+         printf("Addr: 0x%02x, result=%d\n",addr,result);
+         }
+      }
+   }  // end the probe function
+   else
+   {
 
-//  PrintBuff(rd_buf,rd_sz);
+// execute the Read Write function
+      result = I2C_RdWr(i2c_slave_addr ,wr_buf,wr_sz,rd_buf,rd_sz);
+
+
+      if ( NOT_QUIET ) printf("Read Data:");
+      for ( index = 0 ; index  < rd_sz ; index++)
+      {
+           if ( NOT_QUIET )
+           {
+#     ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
+                if( index%16 == 0) printf("\n%3d",index);
+#else
+                if( index%16 == 0) printf("\n");
+#endif
+                if( index%8 == 0) printf("  ");
+            } // end not quiet
+            printf("%02x ", rd_buf[index] );
+       }
+       printf("\n");
+
+//     PrintBuff(rd_buf,rd_sz);
+    } // end a read or write operation
+
 
 // close the devicename file
    I2C_Close();
 
 }  // end main
+
 
 
 
@@ -497,7 +560,7 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
    else
    {
      printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
-     printf(" Parameter Errors:  wr_sz %d  rd_sz  %d \n",wr_sz,rd_sz);
+     printf(" Parameter Errors:  wr_sz %ld  rd_sz  %ld \n",wr_sz,rd_sz);
      return -2;
    }
    
