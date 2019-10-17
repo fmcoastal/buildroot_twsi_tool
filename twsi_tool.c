@@ -8,7 +8,7 @@
 #include <getopt.h>  
 #include <string.h>
 
-#include <i2c.h>   // for i2c_msg - THis should devine I2C_M_RD also ??
+//##include <i2c.h>   // for i2c_msg - THis should devine I2C_M_RD also ??
 
 #include <signal.h>
 
