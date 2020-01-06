@@ -22,7 +22,51 @@ References:
    V. https://buildroot.org/downloads/manual/manual.html#_infrastructure_for_packages_building_kernel_modules 
 
 
-Directory Structure you need to have in Buildroot
+== Directory Structure:
+
+The "twsi_tool" code base will need to be installed in one of two 
+locations (A or B). 
+ 
+    (A)  places the file in the "sdk_base" directory with the rest 
+         of the Marvell code base.  (My Instructions will follow "A".
+         Feel Free to use "B" addif you like)
+    (B)  places the file in the "buildroot" directory with the rest 
+         of the buildroot code base/packages.  .
+ 
+
+A) twsi_tool installed with Marvell Code
+
+  <SDK> 
+     |
+     - buildroot
+     |      |
+     |      - package
+     |      |   
+     |      - <Other buildroot folders>
+     |
+      - sdk_base  (older sdk's called this dir: "buildroot-external-marvell")
+     |      |
+     |      - package
+     |      |      |
+     |      |      - twsi_tool   (Create here to be with Marvell Code)     
+     |      |      |      |
+     |      |      |      - Config.in
+     |      |      |      |
+     |      |      |      - twsi_tool.mk
+     |      |      |      |
+     |      |      |      - (optional- any files/folders you want)
+     |      |      |
+     |      |      - <Other Marvell based OpenWRT Packages>     
+     |      |      |
+     |      |      v 
+     |      - <Other sdk_base folders>
+     |
+     - "output" and other sdk folders
+     |  
+     v
+
+
+B) twsi_tool installed in the buildroot directory with the buildroot code. 
 
   <SDK> 
      |
@@ -30,7 +74,7 @@ Directory Structure you need to have in Buildroot
      |      |
      |      - package
      |      |      |
-     |      |      - twsi_tool   {create here or below -> place the files below )      
+     |      |      - twsi_tool    (Create here to be with Buildroot Code)  
      |      |      |      |
      |      |      |      - Config.in
      |      |      |      |
@@ -44,28 +88,23 @@ Directory Structure you need to have in Buildroot
      |      |   
      |      - <Other buildroot folders>
      |
-      - buildroot-external-marvell
+      - sdk_base   (older sdk's called this dir: "buildroot-external-marvell")
      |      |
      |      - package
-     |      |      |
-     |      |      - twsi_tool     (create this folder here or above)      
-     |      |      |      |
-     |      |      |      - Config.in
-     |      |      |      |
-     |      |      |      - twsi_tool.mk
-     |      |      |      |
-     |      |      |      - (optional- any files/folders you want)
      |      |      |
      |      |      - <Other Marvell based OpenWRT Packages>     
      |      |      |
      |      |      v 
-     |      - <Other external-buildroot-marvell  folders>
+     |      - <Other sdk_base folders>
      |
      - "output" and other sdk folders
      |  
      v
 
-=> File Info:
+
+
+
+== File Info:
 
     "Config.in" -> used by Buildroot's "make menuconfig" command to 
       place entries in the menu. By default, the twsi_tool package 
@@ -79,7 +118,7 @@ Directory Structure you need to have in Buildroot
               target System.
 
 
-Files from Github
+== Files from Github
 
      - twsi_tool
      |      |
@@ -176,7 +215,7 @@ Files from Github
        "package/twsi_tool.mk" location.  Recall from above that I am using 
        a http server for buildroot to fetch from.  (you can use a local directory)
 
-       scp /scratch/twsi_tool-1.0.0.tgz   root@10.11.65.84:/var/www/html/.
+       scp /scratch/twsi_tool/twsi_tool-1.0.0.tgz   root@10.11.65.84:/var/www/html/.
     
 
 => Configure buildroot  - manual Placement
