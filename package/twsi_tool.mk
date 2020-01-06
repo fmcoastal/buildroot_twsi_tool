@@ -19,7 +19,7 @@ TWSI_TOOL_STRIP_COMPONENTS=0
 #TWSI_TOOL_SITE_METHOD = wget
 #TWSI_TOOL_SITE = root@10.11.65.84:80
 TWSI_TOOL_SITE_METHOD = file
-TWSI_TOOL_SITE = /home/fsmith/depot/twsi_tool
+TWSI_TOOL_SITE = /scratch/twsi_tool
 
 
 ####  END Download Options

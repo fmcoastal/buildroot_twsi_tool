@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # this file takes the files from the git clone process and writes the necessary files 
-#   to the buildroot-external-marvell/package location.
+#   to the $BASE_DIR/sdk-base/package location.
 
 #this is a little bit of a circular reference
 #   If you have the files from github, they are not compressed
@@ -13,14 +13,19 @@
 
 PACKAGE_NAME="twsi_tool"
 PACKAGE_NAME_REV="$PACKAGE_NAME"-1.0.0
+
 #OUTPUT_DIR=a80x0_mcbin-release-output
-OUTPUT_DIR=a37xx_espressobin_1000_800-release-output
-#BASE_DIR=/home/fsmith/marvell/sdk/SDK190603/SDK10.0_19.06.3-src
-BASE_DIR=/home/fsmith/marvell/sdk/SDK10.1.1.0-PR
+#OUTPUT_DIR=a37xx_espressobin_1000_800-release-output
+OUTPUT_DIR=cn96xx-release-output
+
+#BASE_DIR=/home/fsmith/marvell/sdk/SDK190603
+BASE_DIR=/home/fsmith/marvell/sdk/SDK-10.1.1.0
 
 
-#SOURCE_TYPE="github"
-SOURCE_TYPE="tarball"
+
+
+SOURCE_TYPE="github"
+#SOURCE_TYPE="tarball"
 
 RED=$'\e[31m'
 GREEN=$'\e[32m'
@@ -43,9 +48,9 @@ echo "********$NORMAL"
 #BR_EXT_DIR=$BASE_DIR/buildroot-external-marvell
 BR_EXT_DIR=$BASE_DIR/sdk-base
 
-# check if "buildroot-external-marvel/package/<PACKAGENAME> exists.
+# check if "$BASE_DIR/$BR_EXT_DIR/package/<PACKAGENAME> exists.
 #   if it does, we will leave it alone. 
-banner "see if $PR_EXT_DIR/package/$PACKAGE_NAME exists"
+banner "see if $BR_EXT_DIR/package/$PACKAGE_NAME exists"
 if [ ! -d $BR_EXT_DIR/package/$PACKAGE_NAME ] ; then
     banner  "$PACKAGE_NAME does not exist, Will create"
     echo "mkdir -p $BR_EXT_DIR/package/$PACKAGE_NAME "
@@ -54,7 +59,7 @@ else
     echo "package <>/$BR_SET_DIR/package/$PACKAGE_NAME exists"
 
 #   #if the directory exists, delete it
-#      rm -rf $BASE_DIR/buildroot-external-marvell/package/$PACKAGE_NAME
+#      rm -rf $BASE_DIR/$BR_EST_DIR/package/$PACKAGE_NAME
 
 fi
 
@@ -63,8 +68,8 @@ fi
 if [ "$SOURCE_TYPE" == "github" ] ; then
     # assumption here is that the <github>/repository exists.  
     #    the location of the package files needed are 
-    #    ../package/Config.in
-    #    ../package/<PACKAGE_NAME>.mk
+    #    ../package/<PACKAGE_NAME>/Config.in
+    #    ../package/<PACKAGE_NAME>/<PACKAGE_NAME>.mk
     SRC_DIR=../package
 
 

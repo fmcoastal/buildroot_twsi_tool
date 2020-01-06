@@ -22,7 +22,7 @@ References:
    V. https://buildroot.org/downloads/manual/manual.html#_infrastructure_for_packages_building_kernel_modules 
 
 
-== Directory Structure:
+=> Directory Structure:
 
 The "twsi_tool" code base will need to be installed in one of two 
 locations (A or B). 
@@ -104,7 +104,7 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
 
 
 
-== File Info:
+=> File Info:
 
     "Config.in" -> used by Buildroot's "make menuconfig" command to 
       place entries in the menu. By default, the twsi_tool package 
@@ -118,7 +118,7 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
               target System.
 
 
-== Files from Github
+=> Files in Github   ( https://github.com/fmcoastal/buildroot_twsi_tool )  
 
      - twsi_tool
      |      |
@@ -128,7 +128,12 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
      |      |  
      |      - README  (This file)
      |      |  
-     |      - x     (bash file to create twsi_tool-<REVISION>.tgz
+     |      - force_rebuild  (bash file to create twsi_tool-<REVISION>.tgz)
+     |      |                 This will also transfer the .tgz file to 
+     |      |                 your HTTP server. (you need "ssh user keys"
+     |      |                 added, you also need access to place the files
+     |      |                 in the proper location for the http server )
+     |      |                 
      |      |  
      |      - package 
      |             | 
@@ -138,40 +143,77 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
      |      
      |      - helpers
      |             | 
-     |             - k -> A bash script. Should be placed in the buildroot
-     |                     <output> directory.  Does a clean removal of 
-     |                     any cached components of the "package", such 
-     |                     that when you run "make twsi_tool", the sources
-     |                     tar file will be re-downloaded from the source. 
+     |             - uninstall -> A bash script (really more of a clean 
+     |                     Script). Must be placed in the buildroot <output> 
+     |                     directory. Does a clean removal of the package,  
+     |                     Script Variables OUTPUT_DIR and BASE_DIR
+     |                     must be updated before running. 
+     |                     The script will remove any cached components of 
+     |                     the "package". (This includes a copy in the 
+     |                     download cache if BR2_DL_DIRECTORY is defined.) 
+     |                     When you run "make twsi_tool", buildroot will reload 
+     |                     the code from the location specified in the 
+     |                     <output>/sdk_base/package/twsi_tool/config.in file.
+     | 
      |             | 
-     |             - Trans -> a bash script which can be run from anywhere.
-     |                        The script deletes the package in the buildroot
-     |                        directory, and then updates the Config.in and 
-     |                        twsi_tool.mk from Github. Useful when testing
-     |                        changes to the .mk file. 
+     |             - install -> a bash script which must be run from directory
+     |                        where the "install" script is place as part of
+     |                        pulling the code from GITHUB.  Script variables 
+     |                        OUTPUT_DIR and  BASE_DIR must be updated before
+     |                        running the script. The script will:
+     |                          1) delete any pre-existing 
+     |                             .../sdk-base/package/twsi_tool directory.
+     |                          2) Create a new .../package/twsi_tool directory
+     |                          3) Copy Config.in and twsi_tool.mk from 
+     |                              ../package to .../sdk-base/package/twsitool  
+     |                          4) Modify the <SDK>/sdk-base/Config.in script  
+     |                             to include twsi_tool in the buildroot build.
      |             | 
 
 
  
 => Comments on my implementation:
 
-    1) Buildroot can download a package via multiple mechanisms.
-       a) I have configured twsi_tool.mk to get the "twsi_tool.tgz"
+    1) My Directory Structure vs the SDK documentation....
+    
+       I create the following directory structure ~/marvell/sdk/SDK_<revison>,
+       and explode the downloaded sdk in the SDK_<revision> folder
+        
+       The SDK documentation has you create a work directory an explode the
+       downloade sdk into ~/work
+
+       Please adjust paths and scripts to reflect your directory structure.
+       
+    2) Buildroot can download a package via multiple mechanisms. The method
+       of download is specified in the twsi_tool.mk file.  I have tested
+       Both Mechanisms below.  
+     
+       The script "force_rebuild" will create a tarball which can be used 
+       by buildroot's twsi_tool.mk instructions. 
+
+       a) From an http server:
+            Modify twsi_tool.mk to get the "twsi_tool.tgz"
             source code from my web server on Hooch (10.11.65.84:80)
 
           from twsi_tool.mk:
-            TWSI_TOOL_SITE_METHOD = wget
-            TWSI_TOOL_SITE = root@10.11.65.84:80
+            #TWSI_TOOL_SITE_METHOD = wget
+            #TWSI_TOOL_SITE = root@10.11.65.84:80
 
-       b) The "twsi_tool.mk" also has lines commented out which will
-          fetch the "twsi_tool.tgz" from a local directory on the
-          build machine. The locaion I have specified in "twsi_tool.mk"
+       b) From a directory:
+             
+         The "twsi_tool.mk" also has lines which will fetch a 
+          "twsi_tool.tgz" file from  a local directory on the
+          build machine. The location I have specified in "twsi_tool.mk"
           is:
              /scratch/twsi_tool/twsi_tool.tgz
 
           from twsi_tool.mk:
-            #TWSI_TOOL_SITE_METHOD = file
-            #TWSI_TOOL_SITE = /scratch/twsi_tool
+            TWSI_TOOL_SITE_METHOD = file
+            TWSI_TOOL_SITE = /scratch/twsi_tool
+
+          Note: the script force_rebuild will create the tarball you need
+                Script variables  REV and BASENAME should not change.
+
 
        c) you can also fetch project source via wget, http, or scp.
 
@@ -185,13 +227,13 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
           from twsi_tool.mk:
             TWSI_TOOL_STRIP_COMPONENTS=0
 
-    2) I set up a Github progject that you "clone" to a working directory.  
+    3) I set up a Github progject that you "clone" to a working directory.  
          From there, you must manually copy project files to the proper 
          location in buildroot.  Additionally you must modify buildroot's 
          make and configure files to have the twsi_tool package build as 
          part of calliing make.   
          
-    3) <REVISION> of the package is defined in twsi_tool.mk
+    4) <REVISION> of the package is defined in twsi_tool.mk
 
 
 => Get the files
