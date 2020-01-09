@@ -90,7 +90,11 @@ banner " add our Package to the \"$BR_EXT_DIR/Compile.in\" list"
 
 TEXT=$(cat $BR_EXT_DIR/Config.in | grep $PACKAGE_NAME)
 if [ "$TEXT" == "" ] ; then
+   if [ ! -f $BR_EXT_DIR/Config.in_Original ] ; then
+      cp $BR_EXT_DIR/Config.in $BR_EXT_DIR/Config.in_Original
+   fi
    echo "echo source \"\$BR2_EXTERNAL_MARVELL_SDK_PATH/package/$PACKAGE_NAME/Config.in\" >> $BR_EXT_DIR/Config.in"
+   echo "" >> $BR_EXT_DIR/Config.in
    echo "source \"\$BR2_EXTERNAL_MARVELL_SDK_PATH/package/$PACKAGE_NAME/Config.in\"" >> $BR_EXT_DIR/Config.in
 else
    echo "$RED found the following entry in the Config.in Directory $NORMAL " 
@@ -110,9 +114,11 @@ popd  >>/dev/zero
 
 
 
-banner "please run \"force_rebuild" from the directory above"
+banner "now runing \"force_rebuild\" from the directory above"
+pushd ../
+./force_rebuild
+popd
 
 
-
-echo "Done"
+echo "$GREEN!Fin$NORMAL"
 
