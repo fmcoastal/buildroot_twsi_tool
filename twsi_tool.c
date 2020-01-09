@@ -7,8 +7,9 @@
 
 #include <getopt.h>  
 #include <string.h>
+#include <errno.h>      // to fetch IOCTL errors
 
-//##include <i2c.h>   // for i2c_msg - THis should devine I2C_M_RD also ??
+//#include <i2c.h>   // for i2c_msg - THis should define I2C_M_RD also ??
 
 #include <signal.h>
 
@@ -88,7 +89,7 @@ void print_usage(void)
    printf("-w 02,0a   write bytes - HEX, comma separated,NO SPACES \n");
    printf("-r <num>       read bytes - number of butes to reads  \n");
    printf("-p             probe - when it works will return addresses for all devices on bus\n");
-   printf("-v             Verbose Flag  \n");
+   printf("-v <num>            Verbose Flag  \n");
    printf("example: \n");
    printf("./twsi_tool  -d /dev/i2c-1  -a 4c -w 07  -r 2  \n");
    printf("./twsi_tool  -q -d /dev/i2c-1  -a 4c -w 07  -r 2  \n");
@@ -124,7 +125,7 @@ int main(int argc, char ** argv)
    strcpy(devicename, "/dev/i2c-0");
 
 
-   while ((option = getopt(argc, argv,"hqpsvl:a:d:w:r:")) != -1) {
+   while ((option = getopt(argc, argv,"hqpsv:l:a:d:w:r:")) != -1) {
        switch (option) {
 
             case 'a' : 
@@ -159,7 +160,8 @@ int main(int argc, char ** argv)
                 wr_flg = 1;
                 break;
  
-            case 'v' : g_i2c_verbose = atoi(optarg);  // #of times to send File Data
+            case 'v' : 
+                g_i2c_verbose = atoi(optarg);  // #of times to send File Data
                 break;
             case 'h' :                               //  Help
                 print_usage();
@@ -492,7 +494,8 @@ return;
 
 }
 
-
+/************************************************************
+ ***********************************************************/
 
 int I2C_Init(char * device_name)
 {
@@ -501,9 +504,14 @@ int I2C_Init(char * device_name)
   // device name should look like /dev/i2c-0 or /dev/i2c-1
   g_i2c_file = open(device_name, O_RDWR);
 
-  if (g_i2c_file < 0) {
-    /* ERROR HANDLING; you can check errno to see what went wrong */
-    return(1);
+  if(g_i2c_verbose > 0) printf("  driver open:  g_i2c_file = %d\n",g_i2c_file);
+
+  if (g_i2c_file < 0) 
+  {
+      /* ERROR HANDLING; you can check errno to see what went wrong */
+      printf("   Problem opening device : %d\n",g_i2c_file);
+      printf("          errno: %d   %s\n",errno,strerror(errno)); 
+      return(1);
   }
   return 0;
 } 
@@ -511,15 +519,19 @@ int I2C_Init(char * device_name)
 int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int64_t rd_sz)
 {
    int result;
+   int expected_result = 0;
 
    struct i2c_msg rw_msg[2];
    struct i2c_rdwr_ioctl_data  i2c_rdwr_data;
 
+   if(g_i2c_verbose > 0) printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
 
 // set the slave address
-   if (ioctl( g_i2c_file, I2C_SLAVE, slave_addr) < 0) 
+   if ( (result = ioctl( g_i2c_file, I2C_SLAVE, slave_addr)) < 0) 
    {
-     /* ERROR HANDLING; you can check errno to see what went wrong */
+      /* ERROR HANDLING; you can check errno to see what went wrong */
+      printf("   Problem setting Slave address: %d\n",result);
+      printf("          errno: %d   %s\n",errno,strerror(errno));
       return(-1);
    }
 
@@ -537,6 +549,7 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
      rw_msg[1].buf   = rd_ptr;
 
      i2c_rdwr_data.nmsgs = 2 ;
+     expected_result = 2 ;
 
    }
    else if ( (wr_sz == 0) && (rd_sz > 0 ) )   /* read only */
@@ -547,6 +560,7 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
      rw_msg[0].buf   = rd_ptr;
 
      i2c_rdwr_data.nmsgs = 1 ;
+     expected_result = 1 ;
    }
     else if ( (wr_sz > 0) && (rd_sz == 0 ) )   /* write  only */
    {
@@ -556,6 +570,7 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
      rw_msg[0].buf   = wr_ptr;
   
      i2c_rdwr_data.nmsgs = 1 ;
+     expected_result = 1 ;
    }
    else
    {
@@ -569,6 +584,14 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
 //   ioctl(file, I2C_RDWR, struct i2c_rdwr_ioctl_data *msgset)
    result = ioctl(g_i2c_file, I2C_RDWR, &i2c_rdwr_data);
 
+   if( result != expected_result)
+   {
+     if(g_i2c_verbose > 0)printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
+     printf(" Result:%d did not match expected_result:%d \n",result,expected_result);
+     printf("          errno: %d   %s\n",errno,strerror(errno));
+   //  return -2;
+   }
+ 
    //printf("result: %d \n",result);  // the result looks like the number of messages handled
 
    return result;
@@ -576,7 +599,11 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
 
 void I2C_Close(void)
 {
-   if(g_i2c_file != 0) close (g_i2c_file);
+   if(g_i2c_file != 0) 
+   {
+     close (g_i2c_file);
+     if(g_i2c_verbose > 0) printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
+   }  
 }
 
 

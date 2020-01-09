@@ -240,6 +240,7 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
    1)  get the twsi_tool package from Github, place the source in the top 
        level directory "/scratch"
    
+   cd /
    mkdir -p /scratch
    cd /scratch
    git clone https://github.com/fmcoastal/buildroot_twsi_tool.git  twsi_tool
@@ -247,29 +248,82 @@ B) twsi_tool installed in the buildroot directory with the buildroot code.
    2) the files and file structure should look like what is shown above. 
 
    3) build the source tar file required by build root for package source files. 
-       the script "x" will put the contentes of the twsi_tool directory into 
+       the script "force_rebuild" will put the contentes of the twsi_tool directory into 
        a .tgz file in a format which buildroot will later explode into the 
        directory  <sdk>/<output>/build/twsi_tool-1.0.0  when Make is run.
    
        cd /scratch/twsi_tool
-       ./x
-   3.1) put the resulting .tgz file in the location specified in the 
-       "package/twsi_tool.mk" location.  Recall from above that I am using 
-       a http server for buildroot to fetch from.  (you can use a local directory)
+       ./force_rebuild
 
-       scp /scratch/twsi_tool/twsi_tool-1.0.0.tgz   root@10.11.65.84:/var/www/html/.
-    
+       When prompted to transfer files to your http server, enter "n". 
+
+   3.1) If necessary, transfer resulting .tgz file in the location specified 
+         in the "package/twsi_tool.mk" location.  Recall from above that I 
+         am using a local directory, and if you are following my example 
+         explicitly, the location the file should be in /scratch/twsi-tool
+
+=> Configure buildroot  - use the /scratch/helpers/install script. 
+
+    4) Modify the "install" script's OUTPUT_DIR and BASE_DIR 
+        variable to match your environment 
+         
+        OUTPUT_DIR=cn96xx-release-output
+        BASE_DIR=/home/fsmith/marvell/sdk/SDK-10.1.1.0
+       
+    5) Run the Script
+     
+       cd /scratch/twsi_tool
+       ./install
+
+    6) Configure buildroot to build twsi_tool
+
+	cd <sdk>/<output>
+        make menuconfig
+     
+       go to "External options->twsi_tool"
+       "*" the box to have it built as part of the make process
+
+       exit and save
+
+    7) Force a build of the twsi tool app
+
+       cd <sdk>/<output>
+       make twsi_tool     
+ 
+           Note: depending on which device you are building the tool for, you 
+             you may need to add in, or comment out #include <i2c.h> from 
+             twsi_tool.c.
+
+              
+       "twsi-tool" app can be found in 
+
+       <sdk>/<output>/build/twsi_tool-1.0.0/twsi_tool
+
+       you can transfer the executable to your target system, or rebuild
+       the rootfs (rebuilding the rootfs puts twsi_tool in your /bin directory
+
+
+     8) running the twsi tool app...
+        
+        for the device you want to query, you need
+             a)  which i2c bus the device is attatched to (schematics)
+             b)  what i2c address was assigned (schematics)
+             c)  how to talk to the device  (device Data Sheet)
+ 
+       running ./twsi_tool with no arguments will print help instructions.
+      
+
 
 => Configure buildroot  - manual Placement
     
     4) Determine which package location you want to install the
          twsi_tool package in.  For me, I will use the
-         <SDK>/buildroot-external-marvell/package location.  
+         <SDK>/sdk-base/package location.  
         (You could also place it in <SDK>/buildroot/package location)
 
-    5) cd buildroot or buildroot-external
+    5) cd buildroot or sdk-base (buildroot-external-marvell)
 
-    cd  /sdk/<SDK>/buildroot-external-marvell/package
+    cd  /sdk/<SDK>/sdk-base/package
 
     6) Make a directory twsi_tool
 
