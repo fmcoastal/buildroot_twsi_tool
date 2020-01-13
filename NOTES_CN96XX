@@ -1,0 +1,102 @@
+
+
+
+
+Examples:
+
+
+# ./twsi_tool -d /dev/i2c-0 -a 54 -w 40 -r 64 -q
+80 2c 0f 18 30 1d 8f 35 88 31 38 41 44 46 32 47 37 32 41 5a 2d 33 47 32 45 31 20 20 20 31 80 2c 45 44 50 41 4b 53 52 33 30 30 31 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# ./twsi_tool -d /dev/i2c-0 -a 54 -w 40 -r 64
+ writeString: 40
+Command Line Arguments:
+     /dev/i2c-0 Device Name
+           0x54 Slave Address
+              0 Verbose
+             64 Read Size
+              1 Write Size
+              0 Probe Flag
+Write Data (Hex):
+  40
+Read Data (Hex):buffer base address: (nil)
+
+  0  80 2c 0f 18 30 1d 8f 35   88 31 38 41 44 46 32 47
+ 16  37 32 41 5a 2d 33 47 32   45 31 20 20 20 31 80 2c
+ 32  45 44 50 41 4b 53 52 33   30 30 31 00 00 00 00 00
+ 48  00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00
+
+
+
+# ./twsi_tool -d /dev/i2c-0 -a 54 -w 40 -r 64 -v 1
+ writeString: 40
+Command Line Arguments:
+     /dev/i2c-0 Device Name
+           0x54 Slave Address
+              1 Verbose
+             64 Read Size
+              1 Write Size
+              0 Probe Flag
+Write Data (Hex):
+  40
+571:twsi_tool.c-I2C_Init
+  driver open:  g_i2c_file = 3
+596:twsi_tool.c-I2C_RdWr
+Read Data (Hex):
+0000000000000000  80 2c 0f 18 30 1d 8f 35  88 31 38 41 44 46 32 47  .,..0..5.18ADF2G
+0000000000000010  37 32 41 5a 2d 33 47 32  45 31 20 20 20 31 80 2c  72AZ-3G2E1   1.,
+0000000000000020  45 44 50 41 4b 53 52 33  30 30 31 00 00 00 00 00  EDPAKSR3001.....
+0000000000000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................                 
+674:twsi_tool.c-I2C_Close
+#
+
+
+
+# ./twsi_tool -d /dev/i2c-0 -p
+Command Line Arguments:
+     /dev/i2c-0 Device Name
+           0x4c Slave Address
+              0 Verbose
+              0 Read Size
+              0 Write Size
+              1 Probe Flag
+
+
+I2c Bus: /dev/i2c-0
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:     -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+10:  -- -- -- -- -- -- -- -- 18 -- 1a -- 1c -- -- --
+20:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+30:  30 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50:  50 -- 52 -- 54 -- -- -- -- -- -- -- -- -- -- --
+60:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+70:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+# ./twsi_tool -d /dev/i2c-1 -p
+Command Line Arguments:
+     /dev/i2c-1 Device Name
+           0x4c Slave Address
+              0 Verbose
+              0 Read Size
+              0 Write Size
+              1 Probe Flag
+
+
+I2c Bus: /dev/i2c-1
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:     -- -- -- -- -- -- -- -- -- -- -- 0c -- -- --
+10:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20:  20 -- -- -- -- -- -- -- -- -- -- -- 2c -- -- --
+30:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50:  -- -- -- -- UU -- -- -- -- -- -- -- -- -- -- --
+60:  60 -- -- -- -- -- -- -- UU -- -- -- -- -- -- --
+70:  -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+#
+
+NOTE:  you get uu when the you attempt to set the device address, and the IOCTL fails.  BUSY???
+
+
+
+
+
