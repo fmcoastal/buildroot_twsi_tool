@@ -62,8 +62,11 @@ int  I2C_Init(char * device);
 void I2C_Close(void);
 int  I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int64_t rd_sz);
 
+
+void ProbeI2cBus(char * device_name);
+
 int  GetHex(unsigned char d);
-void PrintBuff(char * ptr , int sz);
+void PrintBuff(char * ptr , int sz,char * address);
 
 // Exception handling
 /* Signal Handler for SIGINT */
@@ -78,16 +81,13 @@ void sigintHandler(int sig_num)
     exit(-77); 
 } 
 
-
-
-
 void print_usage(void)
 {
    printf("twsi_tool \n");
    printf("-d <DeviceBusName>   EG: /dev/i2c-0  (default)\n");
    printf("-a <address>         I2c Devices's Address\n");
    printf("-w 02,0a   write bytes - HEX, comma separated,NO SPACES \n");
-   printf("-r <num>       read bytes - number of butes to reads  \n");
+   printf("-r <num>       read bytes - number of bytes to reads (Decimal)  \n");
    printf("-p             probe - when it works will return addresses for all devices on bus\n");
    printf("-v <num>            Verbose Flag  \n");
    printf("example: \n");
@@ -182,10 +182,11 @@ int main(int argc, char ** argv)
     signal(SIGINT, sigintHandler); 
 
 
-// work out the write data....
-// Write data is expected to be a sequence of 2 hex digits separated by
-//    a space.  the code will NOT BE BEHAVED if there is only a single
-//    digit, or there is a 0x.
+/* work out the write data from the commnad line input ....
+ * Write data is expected to be a sequence of 2 hex digits separated by
+ *    a space.  the code will NOT BE BEHAVED if there is only a single
+ *    digit, or there is a 0x.
+ */
    if (wr_flg != 0)  
    {
      int    done = 0;    
@@ -219,6 +220,9 @@ int main(int argc, char ** argv)
      wr_sz = index;
    }
 
+/*  NOT_QUITE - prints out the command line data to validate the parameters 
+ *              Were input properly
+ */
   if ( NOT_QUIET )
   {
        printf("Command Line Arguments:\n");
@@ -231,7 +235,7 @@ int main(int argc, char ** argv)
 
        if( wr_flg != 0)
        {
-           printf("Write Data:");
+           printf("Write Data (Hex):");
            for ( index = 0 ; index  < wr_sz ; index++)
            {
 #ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
@@ -246,7 +250,9 @@ int main(int argc, char ** argv)
        printf("\n");
    }  // end NOT_QUITE
 
-// test rd_size_limits
+
+/* test the input read size against the rd_size_limits
+ */
      if ( rd_sz < 0 )
      {
         printf("ERROR: Read Size was < 0\n");
@@ -274,24 +280,7 @@ int main(int argc, char ** argv)
 
    if (g_probe == 1)
    {
-      uint8_t addr;
-      wr_buf[0] = 0;
-      wr_sz      = 1;
-      rd_sz      = 0;
-      rd_buf[0] = 0;
-      
-      for (addr = 1 ; addr < 0x7f; addr ++)
-      {
-         result = I2C_RdWr(addr ,wr_buf,wr_sz,rd_buf,rd_sz);
-         if(result == 0)
-         {
-         printf("Addr: 0x%02x, Device Present\n",addr);
-         }
-         else
-         {
-         printf("Addr: 0x%02x, result=%d\n",addr,result);
-         }
-      }
+      ProbeI2cBus(devicename);
    }  // end the probe function
    else
    {
@@ -300,7 +289,8 @@ int main(int argc, char ** argv)
       result = I2C_RdWr(i2c_slave_addr ,wr_buf,wr_sz,rd_buf,rd_sz);
 
 
-      if ( NOT_QUIET ) printf("Read Data:");
+      if ( NOT_QUIET ) printf("Read Data (Hex):");
+#if 0
       for ( index = 0 ; index  < rd_sz ; index++)
       {
            if ( NOT_QUIET )
@@ -315,8 +305,9 @@ int main(int argc, char ** argv)
             printf("%02x ", rd_buf[index] );
        }
        printf("\n");
-
-//     PrintBuff(rd_buf,rd_sz);
+#else
+     PrintBuff(rd_buf,rd_sz,NULL);
+#endif
     } // end a read or write operation
 
 
@@ -325,6 +316,77 @@ int main(int argc, char ** argv)
 
 }  // end main
 
+/* probe function does a read of device address 0.  
+ *  in a perfect world, you would not do the read, just look for 
+ *  an ack or nack on the address phase
+ */
+void ProbeI2cBus(char * device_name)
+{
+   int       result = 0 ;
+   int       expected_result = 0 ;
+   uint8_t   addr;
+   char      buf[48]; 
+   struct i2c_msg rw_msg[2];
+   struct i2c_rdwr_ioctl_data  i2c_rdwr_data;
+
+    if(g_i2c_verbose > 0) printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
+
+    printf("\n");
+    printf("I2c Bus: %s\n",device_name);
+    printf("      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n");
+    printf("00:    ");
+    
+    for (addr = 1 ; addr < 0x7f; addr ++)
+    {
+
+       if( (addr % 16) == 0) printf("\n%02x: ",addr);
+
+// set the slave address
+       if ( (result = ioctl( g_i2c_file, I2C_SLAVE, addr)) < 0) 
+       {
+           /* ERROR HANDLING; you can check errno to see what went wrong */
+           if(g_i2c_verbose > 0)
+           {
+               printf("   Problem setting Slave address: %d\n",result);
+               printf("          errno: %d   %s\n",errno,strerror(errno));
+           }
+            printf(" UU");
+            continue;   // next addr please
+       }
+
+// set up to do a single read of address 0 
+       {
+           rw_msg[0].addr  = addr;
+           rw_msg[0].flags = I2C_M_RD;
+           rw_msg[0].len   = 1;
+           rw_msg[0].buf   = &(buf[0]);
+
+           i2c_rdwr_data.nmsgs = 1 ;
+           expected_result = 1 ;
+       }
+       i2c_rdwr_data.msgs = &(rw_msg[0]);
+
+//   ioctl(file, I2C_RDWR, struct i2c_rdwr_ioctl_data *msgset)
+       result = ioctl(g_i2c_file, I2C_RDWR, &i2c_rdwr_data);
+
+       if( result != expected_result)
+       {
+           if(g_i2c_verbose > 0) 
+           {
+               printf(" Result:%d did not match expected_result:%d \n",result,expected_result);
+               printf("          errno: %d   %s\n",errno,strerror(errno));
+           }    
+       //  return -2;
+          printf(" --");
+       }
+       else
+       {
+          printf(" %02x",addr);
+       }
+     }
+     printf("\n");
+}  // end the probe function
+ 
 
 
 
@@ -373,7 +435,7 @@ if(test == 1 )
      printf("RE BUS:/dev/i2c-%d Addr: 0x%-2x, Data: 0x%02x\n", adapter_nr,addr,buf[0]);
   }
 
-   PrintBuff( buf , read_actual);
+   PrintBuff( buf , read_actual,NULL );
 
   printf("\n");
 }
@@ -423,10 +485,14 @@ if(test == 1 )
 
 //   ioctl(file, I2C_RDWR, struct i2c_rdwr_ioctl_data *msgset)
    result = ioctl(file, I2C_RDWR, &i2c_rdwr_data);
- 
+   if( result < 0)
+   {
+      printf(" ioctl I2C_RDWR error  %d \n",result);  // Error less than zero
+      printf("          errno: %d   %s\n",errno,strerror(errno));
+   } 
    printf("result: %d \n",result);  // the result looks like the number of Msgs transacted
 
-   PrintBuff( i2c_rd_buf , i2c_rd_buf_sz);
+   PrintBuff( i2c_rd_buf , i2c_rd_buf_sz,NULL);
 
    close(file);
 
@@ -486,7 +552,7 @@ printf(" 0x%02x ID Register   %02x %02x \n",wr_buf[0],rd_buf[0],rd_buf[1]);
 
 printf("\n");
 
-// PrintBuff(rd_buf,rd_sz);
+// PrintBuff(rd_buf,rd_sz,NULL);
 
 I2C_Close();
 
@@ -586,7 +652,7 @@ int I2C_RdWr(int slave_addr,uint8_t * wr_ptr,int64_t wr_sz,uint8_t * rd_ptr,int6
 
    if( result != expected_result)
    {
-     if(g_i2c_verbose > 0)printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
+     if(g_i2c_verbose > 0) printf("%d:%s-%s\n",__LINE__,__FILE__,__FUNCTION__);
      printf(" Result:%d did not match expected_result:%d \n",result,expected_result);
      printf("          errno: %d   %s\n",errno,strerror(errno));
    //  return -2;
@@ -609,20 +675,34 @@ void I2C_Close(void)
 
 
 
-// dumps a character buffer to the screen
-void PrintBuff(char * ptr , int sz)
+void _f_PrintBuff(uint8_t * buffer, int32_t bufferSize,uint8_t * Address);
+void _PrintBuff(char * ptr , int sz, char * address)
 {
   int index;
 
+  printf("buffer base address: %p\n",address);
   for ( index = 0 ; index  < sz ; index++)
   {
     if( index%16 == 0) printf("\n%3d",index);
     if( index%8 == 0) printf("  ");
     printf("%02x ", *(ptr + index) );
   }
+
   printf("\n");
 }
 
+
+
+
+
+// dumps a character buffer to the screen
+void PrintBuff(char * ptr , int sz, char *address)
+{
+       if( g_i2c_verbose > 0)      
+       _f_PrintBuff( (uint8_t *)ptr, (int32_t) sz, (char *)address);
+       else
+       _PrintBuff( ptr , sz, address);
+}
 
 //return 0 for any non-hex character, else the value
 int GetHex(unsigned char d)
@@ -634,6 +714,170 @@ int GetHex(unsigned char d)
    return 0;
 }
 
+#define LLU long long unsigned
+#define fsprint printf
+
+void _f_PrintBuff(uint8_t * buffer, int32_t bufferSize,uint8_t * Address)
+{
+    uint8_t * tmpptr0  = buffer; 
+    uint8_t * tmpptr1  = tmpptr0; 
+    int64_t  i          = 0 ;
+    int64_t  m          = 0 ;
+    int64_t  n          = 0 ;
+    int64_t  j          = 0 ;
+    int64_t  PrintCount = 0 ;   // used as counter to denote when to print \nadderss
+    int64_t  BlankCnt   = 0 ;
+   
+    
+    // align the lead
+    BlankCnt = (unsigned long)Address & 0x000000000f;
+    
+    // print the lead
+    if( BlankCnt != 0)  // if 0 jump to main body 
+    {        
+        for ( PrintCount = 0 ; PrintCount < BlankCnt ; PrintCount++ )
+        {
+            if( PrintCount == 0) // space between fields
+            {
+                fsprint("\n%016x",(unsigned)((unsigned long)Address & ~0x000000000f)); 
+                tmpptr1 = tmpptr0;
+            }
+            if( (PrintCount % 8) == 0)
+            {
+                fsprint(" ");
+            }    
+            fsprint("   ");
+        }
+        PrintCount--;  // remove last increment of printcount
+        // print PrintCount data
+        for ( m = 0  ; (PrintCount < 0xf) && (i < bufferSize); i++, m++,PrintCount++)
+        {
+            if(PrintCount % 8 == 0)
+            {
+                fsprint(" ");
+            }    
+            fsprint(" %02x",(unsigned char)(*tmpptr0++));
+            Address++;
+        }
+        
+        // special case here when count is less than one line and not starting at zero
+        if ( i == bufferSize) 
+        {
+            // print out the last space 
+            for (      ; (PrintCount < 0x0f) ; PrintCount++ )
+            {
+                if( PrintCount  % 8 == 0)
+                {
+                    fsprint(" ");
+                }    
+                fsprint("   ");
+            }
+            // print PrintCount text space
+            for ( PrintCount = 0 ; (PrintCount < BlankCnt) ; PrintCount++ )
+            {
+                if( PrintCount == 0)   // space between fields 
+                {
+                    fsprint(" ");
+                }
+                else if( PrintCount  % 8 == 0)
+                {
+                    fsprint(" ");
+                }    
+                fsprint(" ");
+            }             
+            // print PrintCount characters
+            for( n = 0 ; (n < m) ; n++)
+            {
+                if( n == 0 ) printf(" ");
+                if((*tmpptr1 >=0x20) && (*tmpptr1 <= 0x7e))
+                    fsprint("%c",*tmpptr1);
+                else
+                    fsprint(".");
+                tmpptr1++;
+            }
+            printf("\n");
+            return;
+        } // end i == bufferSize
+        
+        // print PrintCount text space
+        for ( PrintCount = 0 ; (PrintCount < BlankCnt) ; PrintCount++ )
+        {
+            if( PrintCount == 0)   // space between fields 
+            {
+                fsprint(" ");
+            }
+            else if( PrintCount  % 8 == 0)
+            {
+                fsprint(" ");
+            }    
+            fsprint(" ");
+        }
+        // print PrintCount characters
+        n = 0;
+        for( n = 0 ; (PrintCount <= 0xf) && (n < m) ; n++,PrintCount++)
+        {
+            if((*tmpptr1 >=0x20) && (*tmpptr1 <= 0x7e))
+                fsprint("%c",*tmpptr1);
+            else
+                fsprint(".");
+            tmpptr1++;
+        }
+    }
+    
+    // print the body    
+    PrintCount = 0;
+    for (   ; i < bufferSize ; i++)
+    {
+        if( PrintCount == 0 )
+        {
+            fsprint("\n%016llx",((LLU)Address & ~0x0f));
+            tmpptr1 = tmpptr0;
+        }
+        if(PrintCount % 8 == 0)
+        {
+            fsprint(" ");
+        }
+        fsprint(" %02x",(unsigned char)(*tmpptr0++));
+        Address++;
+        PrintCount ++;
+        if( PrintCount  > 0x0f)  
+        {
+            PrintCount = 0;
+            for( j = 0 ; j < 16 ; j++)
+            {
+                if( j == 0 ) printf("  ");
+                if((*tmpptr1 >=0x20) && (*tmpptr1 <= 0x7e))
+                    fsprint("%c",*tmpptr1);
+                else
+                    fsprint(".");
+                tmpptr1++;
+            }
+        }
+    }
+    
+    // print out the last space 
+    m = PrintCount;
+    for (      ; (PrintCount <= 0x0f) ; PrintCount++ )
+    {
+        if( PrintCount  % 8 == 0)
+        {
+            fsprint(" ");
+        }    
+        fsprint("   ");
+    }
+    
+    // print PrintCount characters
+    for( n = 0 ; (n < m) ; n++)
+    {
+        if( n == 0 ) printf("  ");
+        if((*tmpptr1 >=0x20) && (*tmpptr1 <= 0x7e))
+            fsprint("%c",*tmpptr1);
+        else
+            fsprint(".");
+        tmpptr1++;
+    }
+    fsprint("\n");
+}
 
 
 

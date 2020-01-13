@@ -6,7 +6,7 @@
 
 #BASE_DIR=/home/fsmith/marvell/sdk/SDK190603/SDK10.0_19.06.3-src
 #BASE_DIR=/home/fsmith/marvell/sdk/SDK10.1.1.0-PR
-BASE_DIR=/home/fsmith/marvell/sdk/SDK-10.3.1.0
+BASE_DIR=/home/fsmith/marvell/sdk/SDK-10.3.1.0-PR1
 
 
 PACKAGE_NAME=twsi_tool
