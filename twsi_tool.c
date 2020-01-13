@@ -289,25 +289,28 @@ int main(int argc, char ** argv)
       result = I2C_RdWr(i2c_slave_addr ,wr_buf,wr_sz,rd_buf,rd_sz);
 
 
-      if ( NOT_QUIET ) printf("Read Data (Hex):");
-#if 0
-      for ( index = 0 ; index  < rd_sz ; index++)
+      if ( NOT_QUIET ) 
       {
-           if ( NOT_QUIET )
-           {
-#     ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
-                if( index%16 == 0) printf("\n%3d",index);
+           printf("Read Data (Hex):");
+           PrintBuff(rd_buf,rd_sz,NULL);
+      }
+      else
+      {
+          for ( index = 0 ; index  < rd_sz ; index++)
+          {
+              if ( NOT_QUIET )
+              {
+#ifdef PRINT_WRITE_DATA_WITH_INDEX_COUNT
+                   if( index%16 == 0) printf("\n%3d",index);
 #else
-                if( index%16 == 0) printf("\n");
+                   if( index%16 == 0) printf("\n");
 #endif
-                if( index%8 == 0) printf("  ");
-            } // end not quiet
-            printf("%02x ", rd_buf[index] );
-       }
+                   if( index%8 == 0) printf("  ");
+               } // end not quiet
+           printf("%02x ", rd_buf[index] );
+           }
        printf("\n");
-#else
-     PrintBuff(rd_buf,rd_sz,NULL);
-#endif
+       }
     } // end a read or write operation
 
 
